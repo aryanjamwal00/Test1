@@ -1,3 +1,6 @@
+const BASE_URL = "http://127.0.0.1:5000";
+let editId = null;
+let currentUserId = null;
 const captchas = { login:'', signup:'', forgot:'' };
 function generateCaptcha(type) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -329,82 +332,132 @@ document.getElementById('opportunityModal').addEventListener('click', function(e
 });
 
 // Handle opportunity form submission
-        document.getElementById('opportunityForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        // document.getElementById('opportunityForm').addEventListener('submit', function(e) {
+        //     e.preventDefault();
+       // Handle opportunity form submission
+document.getElementById('opportunityForm').addEventListener('submit', function(e) {
+    e.preventDefault();
 
-            // collect values
-            const name = document.getElementById('oppName').value.trim();
-            const duration = document.getElementById('oppDuration').value.trim();
-            const startDate = document.getElementById('oppStartDate').value;
-            const description = document.getElementById('oppDescription').value.trim();
-            const skillsRaw = document.getElementById('oppSkills').value.trim();
-            const category = document.getElementById('oppCategory').value;
-            const futureOpportunities = document.getElementById('oppFuture').value.trim();
-            const maxApplicants = document.getElementById('oppMaxApplicants').value.trim();
+    const name = document.getElementById('oppName').value.trim();
+    const duration = document.getElementById('oppDuration').value.trim();
+    const startDate = document.getElementById('oppStartDate').value;
+    const description = document.getElementById('oppDescription').value.trim();
+    const skillsRaw = document.getElementById('oppSkills').value.trim();
+    const category = document.getElementById('oppCategory').value;
+    const futureOpportunities = document.getElementById('oppFuture').value.trim();
+    const maxApplicants = document.getElementById('oppMaxApplicants').value.trim();
 
-            // basic validation
-            if (!name || !duration || !startDate || !description || !skillsRaw || !category || !futureOpportunities) {
-                showToast('Please fill all required fields');
-                return;
-            }
+    if (!name || !duration || !startDate || !description || !skillsRaw || !category || !futureOpportunities) {
+        showToast('Please fill all required fields');
+        return;
+    }
 
-            // parse skills
-            const skills = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+    const skills = skillsRaw.split(',').map(s => s.trim());
 
-            // create opportunity card element
-            const card = document.createElement('div');
-            card.className = 'opportunity-card';
+    const url = editId 
+    ? `${BASE_URL}/opportunity/${editId}` 
+    : `${BASE_URL}/opportunity`;
 
-            // header and meta
-            const headerHtml = `
-                <div class="opportunity-card-header">
-                    <h5>${escapeHtml(name)}</h5>
-                    <div class="opportunity-meta">
-                        <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${escapeHtml(duration)}</span>
-                        <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(startDate)}</span>
-                    </div>
-                </div>
-                <p class="opportunity-description">${escapeHtml(description)}</p>
-            `;
+const method = editId ? "PUT" : "POST";
 
-            // skills tags
-            const skillsHtml = `<div class="opportunity-skills"><div class="opportunity-skills-label">Skills You'll Gain</div><div class="skills-tags">
-                ${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}
-            </div></div>`;
+fetch(url, {
+    method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name,
+            duration,
+            start_date: startDate,
+            description,
+            skills: skills.join(","),
+            category,
+            future: futureOpportunities,
+            max_applicants: maxApplicants || null,
+            user_id: currentUserId
+        })
+    })
+    .then(res => res.json())
+    .then(() => {
+        showToast('Opportunity created!');
+        closeOpportunityModal();
+        this.reset();
+        loadOpportunities();
+    })
+    .catch(() => showToast("Server error"));
+});
 
-            // footer
-            const applicantsCount = maxApplicants ? `${parseInt(maxApplicants,10)} applicants` : '0 applicants';
-            const footerHtml = `
-                <div class="opportunity-footer">
-                    <span class="applicants-count">${escapeHtml(applicantsCount)}</span>
-                    <button class="view-course-btn" style="width: auto; padding: 8px 16px;">View Details</button>
-                </div>
-            `;
+            // // collect values
+            // const name = document.getElementById('oppName').value.trim();
+            // const duration = document.getElementById('oppDuration').value.trim();
+            // const startDate = document.getElementById('oppStartDate').value;
+            // const description = document.getElementById('oppDescription').value.trim();
+            // const skillsRaw = document.getElementById('oppSkills').value.trim();
+            // const category = document.getElementById('oppCategory').value;
+            // const futureOpportunities = document.getElementById('oppFuture').value.trim();
+            // const maxApplicants = document.getElementById('oppMaxApplicants').value.trim();
 
-            card.innerHTML = headerHtml + skillsHtml + footerHtml;
+            // // basic validation
+            // if (!name || !duration || !startDate || !description || !skillsRaw || !category || !futureOpportunities) {
+            //     showToast('Please fill all required fields');
+            //     return;
+            // }
 
-            // wire up the View Details button to open details modal
-            const viewBtn = card.querySelector('.view-course-btn');
-            viewBtn.addEventListener('click', function() {
-                openOpportunityDetails(name, {
-                    duration: duration,
-                    startDate: startDate,
-                    description: description,
-                    skills: skills,
-                    applicants: maxApplicants ? parseInt(maxApplicants,10) : 0,
-                    futureOpportunities: futureOpportunities,
-                    prerequisites: ''
-                });
-            });
+            // // parse skills
+            // const skills = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
 
-            // append to grid
-            const grid = document.querySelector('.opportunities-grid');
-            if (grid) grid.appendChild(card);
+            // // create opportunity card element
+            // const card = document.createElement('div');
+            // card.className = 'opportunity-card';
 
-            showToast('Opportunity created successfully!');
-            closeOpportunityModal();
-            this.reset();
-        });
+            // // header and meta
+            // const headerHtml = `
+            //     <div class="opportunity-card-header">
+            //         <h5>${escapeHtml(name)}</h5>
+            //         <div class="opportunity-meta">
+            //             <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${escapeHtml(duration)}</span>
+            //             <span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(startDate)}</span>
+            //         </div>
+            //     </div>
+            //     <p class="opportunity-description">${escapeHtml(description)}</p>
+            // `;
+
+            // // skills tags
+            // const skillsHtml = `<div class="opportunity-skills"><div class="opportunity-skills-label">Skills You'll Gain</div><div class="skills-tags">
+            //     ${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}
+            // </div></div>`;
+
+            // // footer
+            // const applicantsCount = maxApplicants ? `${parseInt(maxApplicants,10)} applicants` : '0 applicants';
+            // const footerHtml = `
+            //     <div class="opportunity-footer">
+            //         <span class="applicants-count">${escapeHtml(applicantsCount)}</span>
+            //         <button class="view-course-btn" style="width: auto; padding: 8px 16px;">View Details</button>
+            //     </div>
+            // `;
+
+            // card.innerHTML = headerHtml + skillsHtml + footerHtml;
+
+            // // wire up the View Details button to open details modal
+            // const viewBtn = card.querySelector('.view-course-btn');
+            // viewBtn.addEventListener('click', function() {
+            //     openOpportunityDetails(name, {
+            //         duration: duration,
+            //         startDate: startDate,
+            //         description: description,
+            //         skills: skills,
+            //         applicants: maxApplicants ? parseInt(maxApplicants,10) : 0,
+            //         futureOpportunities: futureOpportunities,
+            //         prerequisites: ''
+            //     });
+            // });
+
+            // // append to grid
+            // const grid = document.querySelector('.opportunities-grid');
+            // if (grid) grid.appendChild(card);
+
+            // showToast('Opportunity created successfully!');
+            // closeOpportunityModal();
+            // this.reset();
+        
 
         // small helper to avoid HTML injection when inserting text
         function escapeHtml(str) {
@@ -647,9 +700,30 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
 
     if (!valid) { shakeForm('loginForm'); return; }
 
-    showToast('Login successful! Redirecting...');
-    setTimeout(() => showDashboard(email), 1200);
-    generateCaptcha('login');
+    // showToast('Login successful! Redirecting...');
+    // setTimeout(() => showDashboard(email), 1200);
+    // generateCaptcha('login');
+    fetch(`${BASE_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+})
+.then(res => res.json())
+.then(data => {
+    if (data.error) {
+        showToast(data.error);
+        return;
+    }
+
+    currentUserId = data.user_id;
+    showToast('Login successful!');
+    setTimeout(() => showDashboard(email), 1000);
+
+    loadOpportunities();
+})
+.catch(() => showToast("Server error"));
+
+generateCaptcha('login');
 });
 
 // ===== SIGNUP =====
@@ -671,10 +745,29 @@ document.getElementById('signupForm').addEventListener('submit', function(e) {
     else if (captchaInput !== captchas.signup) { showError('signupCaptchaErr','Captcha does not match.'); valid = false; generateCaptcha('signup'); }
 
     if (!valid) { shakeForm('signupForm'); return; }
+    // showToast('Account created successfully!');
+    // generateCaptcha('signup');
+    // this.reset(); checkStrength('');
+    // setTimeout(() => showPage('loginPage'), 1500);
+    fetch(`${BASE_URL}/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, email, password })
+})
+.then(res => res.json())
+.then(data => {
+    if (data.error) {
+        showToast(data.error);
+        return;
+    }
+
     showToast('Account created successfully!');
     generateCaptcha('signup');
-    this.reset(); checkStrength('');
+    this.reset(); 
+    checkStrength('');
     setTimeout(() => showPage('loginPage'), 1500);
+})
+.catch(() => showToast("Server error"));
 });
 
 // ===== FORGOT =====
@@ -709,3 +802,72 @@ window.addEventListener('resize', () => {
     const toggle = document.getElementById('menuToggle');
     if (toggle) toggle.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
 });
+function loadOpportunities() {
+    fetch(`${BASE_URL}/opportunities/${currentUserId}`)
+    .then(res => res.json())
+    .then(data => {
+        const grid = document.querySelector('.opportunities-grid');
+        grid.innerHTML = '';
+
+        data.forEach(o => {
+            const card = document.createElement('div');
+            card.className = 'opportunity-card';
+
+           card.innerHTML = `
+    <h5>${o.name}</h5>
+    <p>${o.description}</p>
+
+    <button onclick="openOpportunityDetails('${o.name}', {
+        duration: '${o.duration}',
+        startDate: '${o.start_date}',
+        description: '${o.description}',
+        skills: '${o.skills}'.split(','),
+        applicants: ${o.max_applicants || 0},
+        futureOpportunities: '${o.future}',
+        prerequisites: ''
+    })">View</button>
+
+    <button onclick="editOpportunity(${o.id}, '${o.name}', '${o.duration}', '${o.start_date}', '${o.description}', '${o.skills}', '${o.category}', '${o.future}', ${o.max_applicants || 0})"
+        style="background:orange;color:white;margin-left:10px;">
+        Edit
+    </button>
+
+    <button onclick="deleteOpportunity(${o.id})"
+        style="background:red;color:white;margin-left:10px;">
+        Delete
+    </button>
+`;
+
+            grid.appendChild(card);
+        });
+    });
+}
+function deleteOpportunity(id) {
+    if (!confirm("Are you sure you want to delete this?")) return;
+
+    fetch(`${BASE_URL}/opportunity/${id}`, {
+        method: "DELETE"
+    })
+    .then(res => res.json())
+    .then(() => {
+        showToast("Deleted successfully");
+        loadOpportunities();
+    })
+    .catch(() => showToast("Error deleting"));
+}
+function editOpportunity(id, name, duration, startDate, description, skills, category, future, maxApplicants) {
+    editId = id;
+
+    // Open modal
+    openOpportunityModal();
+
+    // Fill form
+    document.getElementById('oppName').value = name;
+    document.getElementById('oppDuration').value = duration;
+    document.getElementById('oppStartDate').value = startDate;
+    document.getElementById('oppDescription').value = description;
+    document.getElementById('oppSkills').value = skills;
+    document.getElementById('oppCategory').value = category;
+    document.getElementById('oppFuture').value = future;
+    document.getElementById('oppMaxApplicants').value = maxApplicants;
+}
